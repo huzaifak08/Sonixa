@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 
 class PlayerView extends StatelessWidget {
   const PlayerView({super.key});
@@ -61,9 +62,7 @@ class PlayerView extends StatelessWidget {
                   horizontal: 15,
                   vertical: 20,
                 ),
-                child: Image.network(
-                  "https://www.pngplay.com/wp-content/uploads/4/Vinyl-Record-Free-PNG.png",
-                ),
+                child: SvgPicture.asset("assets/images/disk.svg"),
               ),
 
               SizedBox(height: 20),

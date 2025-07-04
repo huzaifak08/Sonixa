@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sonixa/views/player/player_view.dart';
 
 class HomeView extends StatelessWidget {
@@ -120,8 +121,8 @@ class HomeView extends StatelessWidget {
                   // Songs List:
                   ...List.generate(5, (index) {
                     return ListTile(
-                      leading: Image.network(
-                        "https://cdn3d.iconscout.com/3d/premium/thumb/headphone-3d-icon-download-in-png-blend-fbx-gltf-file-formats--headphones-headset-earphones-virtual-reality-pack-science-technology-icons-3342612.png",
+                      leading: SvgPicture.asset(
+                        "assets/images/music.svg",
                         height: 45,
                         width: 45,
                       ),
