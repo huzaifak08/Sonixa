@@ -1,9 +1,10 @@
 import 'package:coctio/constants/theme.dart';
 import 'package:coctio/views/welcome_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(ProviderScope(child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -19,3 +20,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// dart run build_runner build --delete-conflicting-outputs

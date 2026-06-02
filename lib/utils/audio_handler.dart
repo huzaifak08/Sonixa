@@ -1,30 +1,50 @@
 import 'package:just_audio/just_audio.dart';
 
 class AudioHandler {
-  // Singleton pattern to ensure only one instance handles playback across the app
   static final AudioHandler _instance = AudioHandler._internal();
   factory AudioHandler() => _instance;
-  AudioHandler._internal();
+  AudioHandler._internal() {
+    // Listen for track completion state to automatically trigger the next song
+    player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        next();
+      }
+    });
+  }
 
   final AudioPlayer player = AudioPlayer();
   List<Map<String, dynamic>> playlist = [];
   int currentIndex = 0;
 
-  // Initialize and begin track playback
   Future<void> playTrack(
     List<Map<String, dynamic>> currentPlaylist,
     int index,
   ) async {
+    // 1️⃣ Extract targeted path coordinates
+    final String? targetPath = currentPlaylist[index]['path'];
+    if (targetPath == null || targetPath.isEmpty) return;
+
+    // 2️⃣ Dynamic Check: Is this file already loaded in our media engine?
+    final bool isSameTrack =
+        playlist.isNotEmpty &&
+        currentIndex < playlist.length &&
+        playlist[currentIndex]['path'] == targetPath;
+
+    // 3️⃣ Update our active memory indices
     playlist = currentPlaylist;
     currentIndex = index;
 
-    final String? filePath = playlist[currentIndex]['path'];
-    if (filePath == null || filePath.isEmpty) return;
+    // If it's the exact same song, bypass reloading the audio source entirely!
+    if (isSameTrack) {
+      // If the song was paused, resume it; otherwise, do nothing and let it play
+      if (!player.playing) player.play();
+      return;
+    }
 
     try {
-      // just_audio parses local Android files using the 'file://' URI prefix scheme
+      // Fresh song path detected -> Reset stream buffer and play from start
       await player.setAudioSource(
-        AudioSource.uri(Uri.parse("file://$filePath")),
+        AudioSource.uri(Uri.parse("file://$targetPath")),
       );
       player.play();
     } catch (e) {
@@ -40,7 +60,7 @@ class AudioHandler {
     if (currentIndex < playlist.length - 1) {
       playTrack(playlist, currentIndex + 1);
     } else {
-      playTrack(playlist, 0); // Loop back to the beginning of the list
+      playTrack(playlist, 0);
     }
   }
 
@@ -49,7 +69,7 @@ class AudioHandler {
     if (currentIndex > 0) {
       playTrack(playlist, currentIndex - 1);
     } else {
-      playTrack(playlist, playlist.length - 1); // Jump to the last track
+      playTrack(playlist, playlist.length - 1);
     }
   }
 }

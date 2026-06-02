@@ -1,4 +1,4 @@
-import 'package:coctio/views/main_navigation_wrapper.dart';
+import 'package:coctio/views/home_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -66,7 +66,7 @@ class _WelcomeViewState extends State<WelcomeView>
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                const MainNavigationWrapper(),
+                const HomeView(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);

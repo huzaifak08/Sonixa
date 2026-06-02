@@ -15,15 +15,6 @@ class _PlayerViewState extends State<PlayerView> {
   bool _isShuffle = false;
   bool _isRepeat = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Listen for automatic index updates (e.g., track skipping) to rebuild UI text metadata
-    _audioHandler.player.currentIndexStream.listen((_) {
-      if (mounted) setState(() {});
-    });
-  }
-
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     final minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -33,11 +24,6 @@ class _PlayerViewState extends State<PlayerView> {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamically retrieve the track that is currently playing from the active list instance
-    final currentSong = _audioHandler.playlist[_audioHandler.currentIndex];
-    final String songTitle = currentSong['title'] ?? "Unknown Title";
-    final String songArtist = currentSong['artist'] ?? "Unknown Artist";
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -119,7 +105,7 @@ class _PlayerViewState extends State<PlayerView> {
                       ],
                     ),
 
-                    // 2. High-Fidelity Music Disc Representation Context
+                    // 2. Music Disc Asset Wrapper
                     Container(
                       margin: const EdgeInsets.symmetric(vertical: 24.0),
                       height: MediaQuery.sizeOf(context).height * 0.38,
@@ -153,30 +139,50 @@ class _PlayerViewState extends State<PlayerView> {
                       ),
                     ),
 
-                    // 3. Track Headliner Context Info
-                    Column(
-                      children: [
-                        Text(
-                          songTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          songArtist,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(color: Colors.white60),
-                        ),
-                      ],
+                    // 3. Reactive Track Descriptor Section
+                    StreamBuilder<SequenceState?>(
+                      stream: _audioHandler.player.sequenceStateStream,
+                      builder: (context, _) {
+                        final playlist = _audioHandler.playlist;
+                        final currentIdx = _audioHandler.currentIndex;
+
+                        // Safety layout fallback check
+                        if (playlist.isEmpty || currentIdx >= playlist.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final currentSong = playlist[currentIdx];
+                        final String songTitle =
+                            currentSong['title'] ?? "Unknown Title";
+                        final String songArtist =
+                            currentSong['artist'] ?? "Unknown Artist";
+
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              songTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              songArtist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: Colors.white60),
+                            ),
+                          ],
+                        );
+                      },
                     ),
 
-                    // 4. Reactive Stream Scrubbing Timeline
+                    // 4. Position Timeline Scrubbing Layout
                     StreamBuilder<Duration>(
                       stream: _audioHandler.player.positionStream,
                       builder: (context, snapshot) {
@@ -238,7 +244,7 @@ class _PlayerViewState extends State<PlayerView> {
                       },
                     ),
 
-                    // 5. Media Controls Dashboard Layout
+                    // 5. Media Control Actions Toolbar
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24.0),
                       child: Row(
@@ -265,13 +271,9 @@ class _PlayerViewState extends State<PlayerView> {
                               color: Colors.white,
                               size: 42,
                             ),
-                            onPressed: () {
-                              _audioHandler.prev();
-                              setState(() {});
-                            },
+                            onPressed: () => _audioHandler.prev(),
                           ),
 
-                          // Operational Core State Toggle Action Circle Button
                           StreamBuilder<bool>(
                             stream: _audioHandler.player.playingStream,
                             builder: (context, snapshot) {
@@ -309,10 +311,7 @@ class _PlayerViewState extends State<PlayerView> {
                               color: Colors.white,
                               size: 42,
                             ),
-                            onPressed: () {
-                              _audioHandler.next();
-                              setState(() {});
-                            },
+                            onPressed: () => _audioHandler.next(),
                           ),
                           IconButton(
                             icon: Icon(
