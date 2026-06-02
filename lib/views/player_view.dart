@@ -1,4 +1,4 @@
-import 'package:coctio/utils/audio_handler.dart';
+import 'package:coctio/utils/sonixa_audio_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:just_audio/just_audio.dart';
@@ -11,7 +11,7 @@ class PlayerView extends StatefulWidget {
 }
 
 class _PlayerViewState extends State<PlayerView> {
-  final AudioHandler _audioHandler = AudioHandler();
+  final SonixaAudioHandler _audioHandler = SonixaAudioHandler();
   bool _isShuffle = false;
   bool _isRepeat = false;
 
@@ -277,9 +277,12 @@ class _PlayerViewState extends State<PlayerView> {
                           StreamBuilder<bool>(
                             stream: _audioHandler.player.playingStream,
                             builder: (context, snapshot) {
+                              // Safely default to false if the stream data hasn't arrived yet
                               final isPlaying = snapshot.data ?? false;
+
                               return GestureDetector(
                                 onTap: () {
+                                  // Toggle system media engines depending on the current active state
                                   if (isPlaying) {
                                     _audioHandler.pause();
                                   } else {
@@ -297,7 +300,9 @@ class _PlayerViewState extends State<PlayerView> {
                                     isPlaying
                                         ? Icons.pause_rounded
                                         : Icons.play_arrow_rounded,
-                                    color: const Color(0xFF1E164C),
+                                    color: const Color(
+                                      0xFF1E164C,
+                                    ), // Deep premium background color match
                                     size: 40,
                                   ),
                                 ),

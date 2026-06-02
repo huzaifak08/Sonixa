@@ -1,6 +1,6 @@
 import 'package:coctio/components/playing_wave_indicator.dart';
 import 'package:coctio/providers/audio_provider/audio_provider.dart';
-import 'package:coctio/utils/audio_handler.dart';
+import 'package:coctio/utils/sonixa_audio_handler.dart';
 import 'package:coctio/views/player_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +19,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   void initState() {
     super.initState();
     // Keep playback indexing synchronized dynamically across global instances
-    AudioHandler().player.currentIndexStream.listen((_) {
+    SonixaAudioHandler().player.currentIndexStream.listen((_) {
       if (mounted) setState(() {});
     });
   }
@@ -141,13 +141,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
               // Real-time local stream evaluation for individual track items
               trailing: StreamBuilder<bool>(
-                stream: AudioHandler().player.playingStream,
+                stream: SonixaAudioHandler().player.playingStream,
                 builder: (context, playSnapshot) {
                   final isPlaying = playSnapshot.data ?? false;
-                  final hasActivePlaylist = AudioHandler().playlist.isNotEmpty;
+                  final hasActivePlaylist =
+                      SonixaAudioHandler().playlist.isNotEmpty;
                   final isCurrentTrack =
                       hasActivePlaylist &&
-                      (AudioHandler().currentIndex == index);
+                      (SonixaAudioHandler().currentIndex == index);
 
                   if (isCurrentTrack) {
                     return PlayingWaveIndicator(isPlaying: isPlaying);
@@ -158,10 +159,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
                 },
               ),
               onTap: () async {
-                await AudioHandler().playTrack(songs, index);
-                setState(
-                  () {},
-                ); // Updates the local view context map index coordinates instantly
+                await SonixaAudioHandler().playTrack(songs, index);
+                if (mounted) setState(() {});
 
                 if (context.mounted) {
                   Navigator.push(
@@ -213,14 +212,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
   // Fully Synchronized Stream-Driven Floating Mini Player Panel Layer
   Widget _buildMiniPlayer(double height) {
     return StreamBuilder<SequenceState?>(
-      stream: AudioHandler().player.sequenceStateStream,
+      stream: SonixaAudioHandler().player.sequenceStateStream,
       builder: (context, snapshot) {
-        final playlist = AudioHandler().playlist;
+        final playlist = SonixaAudioHandler().playlist;
 
         // Keep mini player entirely hidden if no file handles have been actively loaded yet
         if (playlist.isEmpty) return const SizedBox.shrink();
 
-        final currentIndex = AudioHandler().currentIndex;
+        final currentIndex = SonixaAudioHandler().currentIndex;
 
         // Safety bounds check to avoid index errors on quick playlist transitions
         if (currentIndex >= playlist.length) return const SizedBox.shrink();
@@ -325,12 +324,12 @@ class _HomeViewState extends ConsumerState<HomeView> {
                               ),
                               onPressed: () {
                                 setState(() {
-                                  AudioHandler().prev();
+                                  SonixaAudioHandler().prev();
                                 });
                               },
                             ),
                             StreamBuilder<bool>(
-                              stream: AudioHandler().player.playingStream,
+                              stream: SonixaAudioHandler().player.playingStream,
                               builder: (context, playSnapshot) {
                                 final isPlaying = playSnapshot.data ?? false;
                                 return IconButton(
@@ -344,9 +343,9 @@ class _HomeViewState extends ConsumerState<HomeView> {
                                   ),
                                   onPressed: () {
                                     if (isPlaying) {
-                                      AudioHandler().pause();
+                                      SonixaAudioHandler().pause();
                                     } else {
-                                      AudioHandler().play();
+                                      SonixaAudioHandler().play();
                                     }
                                   },
                                 );
@@ -361,7 +360,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
                               ),
                               onPressed: () {
                                 setState(() {
-                                  AudioHandler().next();
+                                  SonixaAudioHandler().next();
                                 });
                               },
                             ),
@@ -372,11 +371,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
                   ),
                   const SizedBox(height: 6),
                   StreamBuilder<Duration>(
-                    stream: AudioHandler().player.positionStream,
+                    stream: SonixaAudioHandler().player.positionStream,
                     builder: (context, posSnapshot) {
                       final position = posSnapshot.data ?? Duration.zero;
                       final duration =
-                          AudioHandler().player.duration ?? Duration.zero;
+                          SonixaAudioHandler().player.duration ?? Duration.zero;
 
                       double progressValue = 0.0;
                       if (duration.inMilliseconds > 0) {
