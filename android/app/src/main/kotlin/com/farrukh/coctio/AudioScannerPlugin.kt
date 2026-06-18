@@ -3,7 +3,8 @@ package com.farrukh.coctio
 import android.content.ContentResolver
 import android.content.Context
 import android.provider.MediaStore
-import android.media.session.MediaSession // ◄── Added native media session control mapping
+import android.media.AudioManager // ◄── Target the Android Native Audio Framework
+import android.media.session.MediaSession // ◄── Native media session control mapping
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -12,7 +13,7 @@ import kotlin.concurrent.thread
 class AudioScannerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private lateinit var channel: MethodChannel
     private var context: Context? = null
-    private var mediaSession: MediaSession? = null // Handle container
+    private var mediaSession: MediaSession? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
@@ -25,37 +26,63 @@ class AudioScannerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 isActive = true
             }
         } catch (e: Exception) {
-            print("Failed to bind native MediaSession string token: $e")
+            println("Failed to bind native MediaSession string token: $e")
         }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
-        mediaSession?.release() // Release resource token cleanly
+        mediaSession?.release()
         mediaSession = null
         context = null
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        if (call.method == "getAudioFiles") {
-            val ctx = context
-            if (ctx == null) {
-                result.error("CONTEXT_ERROR", "Application context is null", null)
-                return
-            }
+        val ctx = context
+        if (ctx == null) {
+            result.error("CONTEXT_ERROR", "Application context is null", null)
+            return
+        }
 
-            thread {
-                try {
-                    val audioList = getAudioFiles(ctx)
-                    val handler = android.os.Handler(android.os.Looper.getMainLooper())
-                    handler.post { result.success(audioList) }
-                } catch (e: Exception) {
-                    val handler = android.os.Handler(android.os.Looper.getMainLooper())
-                    handler.post { result.error("DATABASE_ERROR", e.localizedMessage, null) }
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
+        when (call.method) {
+            "getAudioFiles" -> {
+                thread {
+                    try {
+                        val audioList = getAudioFiles(ctx)
+                        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                        handler.post { result.success(audioList) }
+                    } catch (e: Exception) {
+                        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                        handler.post { result.error("DATABASE_ERROR", e.localizedMessage, null) }
+                    }
                 }
             }
-        } else {
-            result.notImplemented()
+            "getSystemVolume" -> {
+                if (audioManager != null) {
+                    val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    // Return normalized double value mapping down cleanly to Dart sliders [0.0 - 1.0]
+                    result.success(currentVol.toDouble() / maxVol.toDouble())
+                } else {
+                    result.error("AUDIO_ERROR", "System AudioManager unavailable", null)
+                }
+            }
+            "setSystemVolume" -> {
+                val volumePercentage = call.argument<Double>("volume") ?: 0.0
+                if (audioManager != null) {
+                    val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    val targetVol = (volumePercentage * maxVol).toInt()
+                    
+                    // Mutate system volume while displaying the native OS overlay banner for visual feedback
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, AudioManager.FLAG_SHOW_UI)
+                    result.success(null)
+                } else {
+                    result.error("AUDIO_ERROR", "System AudioManager unavailable", null)
+                }
+            }
+            else -> result.notImplemented()
         }
     }
 
